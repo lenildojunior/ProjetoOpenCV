@@ -7,8 +7,12 @@ import android.Manifest;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceView;
@@ -63,30 +67,34 @@ import java.util.Date;
 import java.util.List;
 
 
-
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
-    Mat img1,img2,img3,result,element,element_dilate,shadow_image,flow;
-    boolean cv_on=false;
+    Mat img1, img2, img3, result, element, element_dilate, shadow_image, flow;
+    boolean cv_on = false,flag_imei=false,flag_dispositivo_realocado=false;
     CameraBridgeViewBase cameraBridgeViewBase;
     BaseLoaderCallback baseLoaderCallback;
+    TelephonyManager tm;
+    LocationManager locationManager;
+    LocationListener locationListener;
+    String IMEI,longitude_str,latitude_str;
+    Double longitude,latitude;
     List<Point> pontos;
-   // List<MatOfPoint> contours;
-  //  List<MatOfPoint> goodContours;
-   // BackgroundSubtractorMOG2 backgroundSubtractorMOG2;
-  //  MatOfRect obj;
-   // FeatureDetector blob ;
-   // MatOfKeyPoint keypoints1;
-    MatOfPoint2f prevFeatures,nextFeatures;
+    // List<MatOfPoint> contours;
+    //  List<MatOfPoint> goodContours;
+    // BackgroundSubtractorMOG2 backgroundSubtractorMOG2;
+    //  MatOfRect obj;
+    // FeatureDetector blob ;
+    // MatOfKeyPoint keypoints1;
+    MatOfPoint2f prevFeatures, nextFeatures;
     MatOfPoint features;
     MatOfByte status;
     MatOfFloat err;
-    Date tempoAntigo, tempoAtual,tempoAux;
-    int cont =0;
-    int car_count=0;
+    Date tempoAntigo, tempoAtual, tempoAux;
+    int cont = 0;
+    int car_count = 0,flag_envio=0;
 
-    Socket client;
-    ObjectOutputStream ois;
+    Socket client,test_client;
+    ObjectOutputStream ois,test_ois;
     String IP_digitado;
 
 
@@ -94,11 +102,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     //File mCascadeFile;
     //CascadeClassifier mJavaDetector;
     //float mRelativeFaceSize   = 0.2f;
-   // int mAbsoluteFaceSize   = 0;
+    // int mAbsoluteFaceSize   = 0;
 
 
-    //funcoes dos botoes
-    public void apply_cv(View view){//Habilita o processamento das imagens
+    //Inicio funcoes dos botoes
+    public void apply_cv(View view) {//Habilita o processamento das imagens
 
         cv_on = true;
         Date currentTime = Calendar.getInstance().getTime();
@@ -115,6 +123,22 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     }
 
+    public void indica_realocacao(View view){
+        flag_dispositivo_realocado = true;
+        Toast.makeText(getApplicationContext(),"Dispositivo realocado = True",Toast.LENGTH_SHORT).show();
+    }
+
+    public void show_coordeninates(View view){
+        if(latitude_str != null){
+            Toast.makeText(getApplicationContext(),"lat,long: (" +latitude_str + "," + longitude_str + ")",Toast.LENGTH_SHORT ).show();
+        }
+    }
+    public void show_imei(View view){
+        if(IMEI != null){
+            Toast.makeText(getApplicationContext(),"IMEI = " + IMEI,Toast.LENGTH_SHORT).show();
+        }
+    }
+    /*Fim da criação das funções dos botões*/
 
 
 
@@ -128,9 +152,48 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 1);
             }
+            if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED){
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_PHONE_STATE}, 1);
+            }
+            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+            }
         }
 
 
+
+
+        /*Pegando o código do IMEI*/
+        tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        IMEI = tm.getDeviceId();
+
+        /*obtendo as coordenadas do GPS*/
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        locationListener = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                latitude = location.getLatitude();
+                latitude_str = latitude.toString();
+                longitude = location.getLongitude();
+                longitude_str = longitude.toString();
+            }
+
+            @Override
+            public void onStatusChanged(String s, int i, Bundle bundle) {
+
+            }
+
+            @Override
+            public void onProviderEnabled(String s) {
+
+            }
+
+            @Override
+            public void onProviderDisabled(String s) {
+
+            }
+        };
+        locationManager.requestLocationUpdates("gps",5000,0,locationListener);
 
         /*acessando data*/
         TextView textView=findViewById(R.id.data);
@@ -216,7 +279,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             difference = Math.abs(dataAntiga.getMinutes() - dataAtual.getMinutes());
         }
 
-        if(difference == 5){//intervalo de tempo para envio dos dados
+        if(difference == 1){//intervalo de tempo para envio dos dados
             novaData = dataAtual;
             cont++;
             Imgproc.putText(img1,"1 minuto",new Point(50,50),Core.FONT_ITALIC, 3.0,new Scalar(255));
@@ -226,11 +289,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             try {
                 client = new Socket(IP_digitado, 65432);
                 PrintWriter printWriter = new PrintWriter(client.getOutputStream());
-                printWriter.write(Integer.toString(novaData.getMinutes()));
+                printWriter.write(IMEI + "," + latitude_str + "," + longitude_str);
                 printWriter.flush();
                 printWriter.close();
                 ois = new ObjectOutputStream(client.getOutputStream());
-
+                //ois.writeChars("(1,teste)");
                 ois.flush();
                 ois.close();
                 client.close();
@@ -272,6 +335,29 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             tempoAux =  compTime(tempoAtual,tempoAntigo);
             tempoAntigo = tempoAux;
 
+            //Envio das coordenadas do dispositivo para preencher a localizacao
+            if(flag_envio == 0) {
+                try {
+                    test_client = new Socket(IP_digitado, 65432);
+                    PrintWriter printWriter2 = new PrintWriter(test_client.getOutputStream());
+                    if(flag_dispositivo_realocado) {
+                        printWriter2.write(IMEI + "," + latitude_str + "," + longitude_str + "," + '1');
+                    }
+                    else printWriter2.write(IMEI + "," + latitude_str + "," + longitude_str + "," + '0');
+                    printWriter2.flush();
+                    printWriter2.close();
+                    test_ois = new ObjectOutputStream(test_client.getOutputStream());
+                    //ois.writeChars("(1,teste)");
+                    test_ois.flush();
+                    test_ois.close();
+                    test_client.close();
+
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                flag_envio=1;
+            }
 
 
             //backgroundSubtractorMOG2.apply(img1,img3);
