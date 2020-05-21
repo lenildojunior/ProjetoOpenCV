@@ -85,8 +85,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     //  MatOfRect obj;
     // FeatureDetector blob ;
     // MatOfKeyPoint keypoints1;
-    MatOfPoint2f prevFeatures, nextFeatures;
-    MatOfPoint features;
+    MatOfPoint2f prevFeatures, nextFeatures,prevFeatures2,nextFeatures2;
+    MatOfPoint features,features2;
     MatOfByte status;
     MatOfFloat err;
     Date tempoAntigo, tempoAtual, tempoAux;
@@ -140,6 +140,43 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
     /*Fim da criação das funções dos botões*/
 
+    public void realizaConexao(String IMEI, String latitude, String longitude){
+        try {
+            client = new Socket("54.159.245.247", 65432);
+            PrintWriter printWriter = new PrintWriter(client.getOutputStream());
+            printWriter.write(IMEI + "," + latitude+ "," + longitude);
+            printWriter.flush();
+            printWriter.close();
+            ois = new ObjectOutputStream(client.getOutputStream());
+            //ois.writeChars("(1,teste)");
+            ois.flush();
+            ois.close();
+            client.close();
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void realizaConexao(String IMEI, String latitude, String longitude,char flagRealocacao){
+        try {
+            client = new Socket("54.159.245.247", 65432);
+            PrintWriter printWriter = new PrintWriter(client.getOutputStream());
+            printWriter.write(IMEI + "," + latitude+ "," + longitude+ "," + flagRealocacao);
+            printWriter.flush();
+            printWriter.close();
+            ois = new ObjectOutputStream(client.getOutputStream());
+            //ois.writeChars("(1,teste)");
+            ois.flush();
+            ois.close();
+            client.close();
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 
     @Override
@@ -211,24 +248,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         cameraBridgeViewBase.setVisibility(SurfaceView.VISIBLE);
         cameraBridgeViewBase.setCvCameraViewListener(this);
 
-        //Habilitando o campo para receber o ip do servidor
-        final EditText ET = (EditText) findViewById(R.id.Enter_text);
-        final Button Bt_enter = (Button) findViewById(R.id.Enter_button);
-
-        Bt_enter.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                ET.setVisibility(View.INVISIBLE);
-                Bt_enter.setVisibility(View.INVISIBLE);
-                if (!ET.getText().toString().equals("")){
-                    Toast.makeText(getApplicationContext(),"Texto não nulo", Toast.LENGTH_SHORT).show();
-                    IP_digitado = ET.getText().toString();
-                }
-            }
-        });
-
-
-
         if(OpenCVLoader.initDebug()){
             Toast.makeText(getApplicationContext(),"OpenCV foi carregado!!",Toast.LENGTH_SHORT).show();
         }
@@ -272,38 +291,21 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private Date compTime(Date dataAtual,Date dataAntiga){
         Date novaData;
         int difference =0;
-        if(dataAntiga.getMinutes() == 58 && dataAtual.getMinutes() == 0){
-            difference = 2;
+        if(dataAntiga.getMinutes() == 50 && dataAtual.getMinutes() == 0){
+            difference = 10;
         }
         else {
             difference = Math.abs(dataAntiga.getMinutes() - dataAtual.getMinutes());
         }
 
-        if(difference == 1){//intervalo de tempo para envio dos dados
+        if(difference == 10){//intervalo de tempo para envio dos dados
             novaData = dataAtual;
             cont++;
             Imgproc.putText(img1,"1 minuto",new Point(50,50),Core.FONT_ITALIC, 3.0,new Scalar(255));
             Imgproc.putText(img1,Integer.toString(cont),new Point(50,200),Core.FONT_ITALIC, 3.0,new Scalar(255));
 
             //socket connection
-            try {
-                client = new Socket(IP_digitado, 65432);
-                PrintWriter printWriter = new PrintWriter(client.getOutputStream());
-                printWriter.write(IMEI + "," + latitude_str + "," + longitude_str);
-                printWriter.flush();
-                printWriter.close();
-                ois = new ObjectOutputStream(client.getOutputStream());
-                //ois.writeChars("(1,teste)");
-                ois.flush();
-                ois.close();
-                client.close();
-
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            //Toast.makeText(getApplicationContext(),"1 minuto",Toast.LENGTH_SHORT).show();
+            realizaConexao(IMEI,latitude_str,longitude_str);
         }
         else{
             novaData = dataAntiga;
@@ -337,25 +339,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
             //Envio das coordenadas do dispositivo para preencher a localizacao
             if(flag_envio == 0) {
-                try {
-                    test_client = new Socket(IP_digitado, 65432);
-                    PrintWriter printWriter2 = new PrintWriter(test_client.getOutputStream());
-                    if(flag_dispositivo_realocado) {
-                        printWriter2.write(IMEI + "," + latitude_str + "," + longitude_str + "," + '1');
-                    }
-                    else printWriter2.write(IMEI + "," + latitude_str + "," + longitude_str + "," + '0');
-                    printWriter2.flush();
-                    printWriter2.close();
-                    test_ois = new ObjectOutputStream(test_client.getOutputStream());
-                    //ois.writeChars("(1,teste)");
-                    test_ois.flush();
-                    test_ois.close();
-                    test_client.close();
-
-
-                } catch (IOException e) {
-                    e.printStackTrace();
+                if(flag_dispositivo_realocado) {
+                    realizaConexao(IMEI,latitude_str,longitude_str,'1');
                 }
+                realizaConexao(IMEI,latitude_str,longitude_str,'0');
+
                 flag_envio=1;
             }
 
@@ -385,31 +373,39 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
             if(features.toArray().length==0) {
                 int rowStep = 40, colStep = 40;
-                int nRows = img1.rows()/rowStep, nCols = (img1.cols()/2)/colStep;
-                //Point points[] = new Point[nRows*nCols];
-                Point points[] = new Point[nRows*3];
+                int nRows = 5; //Numero de linhas a se usada no fluxo
+                //Cada vetor de pontos representa uma região para o cálculo do fluxo
+                Point points[] = new Point[nRows*3]; //o 3 representa a quatidade de colunas desejadas para o fluxo
+                Point points2[] = new Point[nRows*3];
                 for(int i=0; i<nRows; i++){
                     //for(int j=0; j<nCols; j++){
                     for(int j=0; j<3; j++){
                         points[i*3+j]=new Point(j*colStep, i*rowStep);
-//                            Log.d(TAG, "\nRow: "+i*rowStep+"\nCol: "+j*colStep+"\n: ");
+                        points2[i*3+j] = new Point(j*colStep, (i+10)*rowStep); //definindo que a segunda região iá começar na linha 10 * colstep
                     }
                 }
                 features.fromArray(points);
-
-
+                features2.fromArray(points2);
                 prevFeatures.fromList(features.toList());
+                prevFeatures2.fromList(features2.toList());
                 img2 = img1.clone();
            }
             nextFeatures.fromArray(prevFeatures.toArray());
+            nextFeatures2.fromArray(prevFeatures2.toArray());
+
+            //Processamento do fluxo optico
             Video.calcOpticalFlowPyrLK(img2,img1, prevFeatures, nextFeatures, status, err);
-            //Video.calcOpticalFlowFarneback(img2,img1,prevFeatures,0.5,3,15,3,5,1.2,0);
+            Video.calcOpticalFlowPyrLK(img2,img1, prevFeatures2, nextFeatures2, status, err);
+
             List<Point> prevList=features.toList(), nextList=nextFeatures.toList();
+            List<Point> prevList2=features2.toList(), nextList2=nextFeatures2.toList();
             Scalar color = new Scalar(255);
 
+            //Gerar os pontos e linhas na tela
             for(int i = 0; i<prevList.size(); i++){
                     //Imgproc.circle(img1, prevList.get(i), 5, color);
                 Imgproc.line(img1,prevList.get(i), nextList.get(i), color);
+                Imgproc.line(img1,prevList2.get(i), nextList2.get(i), color);
                 if(comp_points(prevList.get(i),nextList.get(i))){
                     if(i<prevList.size()-3){//Verifica se não está na última linha
                         if(comp_points(prevList.get(i+3),nextList.get(i+3))){
@@ -422,18 +418,22 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                         }
                     }
                 }
+                if(comp_points(prevList2.get(i),nextList2.get(i))){
+                    if(i<prevList2.size()-3){//Verifica se não está na última linha
+                        if(comp_points(prevList2.get(i+3),nextList2.get(i+3))){
+                            car_count++;
+                        }
+                    }
+                    else{
+                        if(comp_points(prevList2.get(i-3),nextList2.get(i-3))){
+                            car_count++;
+                        }
+                    }
+                }
             }
-
             img2 = img1.clone();
 
             /*fim teste optical flow2*/
-
-
-
-
-
-
-
 
             //Imgproc.threshold(img1,shadow_image,55,255,Imgproc.THRESH_BINARY_INV);
 
@@ -530,10 +530,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
        // obj=new MatOfRect();
         prevFeatures = new MatOfPoint2f();
         nextFeatures = new MatOfPoint2f();
+        prevFeatures2 = new MatOfPoint2f();
+        nextFeatures2 = new MatOfPoint2f();
         status = new MatOfByte();
         //backgroundSubtractorMOG2 = Video.createBackgroundSubtractorMOG2();
        // contours = new ArrayList<MatOfPoint>();
         features = new MatOfPoint();
+        features2 = new MatOfPoint();
         err = new MatOfFloat();
        // backgroundSubtractorMOG2.setHistory(100);
        // backgroundSubtractorMOG2.setDetectShadows(true);
