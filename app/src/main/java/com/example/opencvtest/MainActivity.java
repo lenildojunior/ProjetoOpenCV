@@ -70,7 +70,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
     Mat img1, img2, img3, result, element, element_dilate, shadow_image, flow;
-    boolean cv_on = false,flag_imei=false,flag_dispositivo_realocado=false;
+    boolean cv_on = false,flag_imei=false,flag_dispositivo_realocado=false,flag_habilita_contagem=false;
     CameraBridgeViewBase cameraBridgeViewBase;
     BaseLoaderCallback baseLoaderCallback;
     TelephonyManager tm;
@@ -79,6 +79,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     String IMEI,longitude_str,latitude_str;
     Double longitude,latitude;
     List<Point> pontos;
+    int pontos_superiores_fluxo[],pontos_inferiores_fluxo[];
     // List<MatOfPoint> contours;
     //  List<MatOfPoint> goodContours;
     // BackgroundSubtractorMOG2 backgroundSubtractorMOG2;
@@ -86,12 +87,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     // FeatureDetector blob ;
     // MatOfKeyPoint keypoints1;
     MatOfPoint2f prevFeatures, nextFeatures,prevFeatures2,nextFeatures2;
-    MatOfPoint features,features2;
+    MatOfPoint features,features2,teste;
     MatOfByte status;
     MatOfFloat err;
     Date tempoAntigo, tempoAtual, tempoAux;
     int cont = 0;
-    int car_count = 0,flag_envio=0;
+    int car_count_faixa1 = 0,car_count_faixa2 = 0,flag_envio=0;
 
     Socket client,test_client;
     ObjectOutputStream ois,test_ois;
@@ -116,8 +117,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public void remove_cv(View view){//Desabilita o processamento da imagem e reseta o contador dos carros
         if(cv_on){
             cv_on = false;
-            Toast.makeText(getApplicationContext(),Integer.toString(car_count), Toast.LENGTH_LONG).show();
-            car_count = 0;
+            Toast.makeText(getApplicationContext(),Integer.toString(car_count_faixa1), Toast.LENGTH_LONG).show();
+            car_count_faixa1 = 0;
+            car_count_faixa2 = 0;
         }
         else Toast.makeText(getApplicationContext(),"cv_on = false", Toast.LENGTH_LONG).show();
 
@@ -305,7 +307,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             Imgproc.putText(img1,Integer.toString(cont),new Point(50,200),Core.FONT_ITALIC, 3.0,new Scalar(255));
 
             //socket connection
-            realizaConexao(IMEI,latitude_str,longitude_str);
+            //realizaConexao(IMEI,latitude_str,longitude_str);
         }
         else{
             novaData = dataAntiga;
@@ -314,11 +316,22 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     //Função para realizar a ccomparação dos pontos do fluxo optico para contar os carros
-    boolean comp_points(Point prevPoint, Point nextPoint){
-       if(nextPoint.x < prevPoint.x && Math.abs(nextPoint.x - prevPoint.x )>10){
+    boolean comp_points(Point prevPoint, Point nextPoint, int pontoSuperior, int pontoInferior){
+       /*if(nextPoint.x < prevPoint.x && Math.abs(nextPoint.x - prevPoint.x )>10){
            return true;
        }
-       else return false;
+       else return false;*/
+       if(nextPoint.x < prevPoint.x){
+           if(prevPoint.x == pontoSuperior && Math.abs(nextPoint.x - prevPoint.x )>20){
+               flag_habilita_contagem = true;
+               Imgproc.putText(img1,"entrou",new Point(100,100),Core.FONT_ITALIC,2,new Scalar(255));
+           }
+           if(prevPoint.x == pontoInferior && flag_habilita_contagem && Math.abs(nextPoint.x - prevPoint.x )>20){
+               flag_habilita_contagem = false;
+               return true;
+           }
+       }
+       return false;
     }
 
 
@@ -338,14 +351,14 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             tempoAntigo = tempoAux;
 
             //Envio das coordenadas do dispositivo para preencher a localizacao
-            if(flag_envio == 0) {
+            /*if(flag_envio == 0) {
                 if(flag_dispositivo_realocado) {
                     realizaConexao(IMEI,latitude_str,longitude_str,'1');
                 }
                 realizaConexao(IMEI,latitude_str,longitude_str,'0');
 
                 flag_envio=1;
-            }
+            }*/
 
 
             //backgroundSubtractorMOG2.apply(img1,img3);
@@ -372,16 +385,20 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             /*Teste optical flow2*/
 
             if(features.toArray().length==0) {
-                int rowStep = 40, colStep = 40;
+                int rowStep = 40, colStep = 40,nCols = 3;
                 int nRows = 5; //Numero de linhas a se usada no fluxo
                 //Cada vetor de pontos representa uma região para o cálculo do fluxo
-                Point points[] = new Point[nRows*3]; //o 3 representa a quatidade de colunas desejadas para o fluxo
-                Point points2[] = new Point[nRows*3];
+                Point points[] = new Point[nRows*nCols]; //o 3 representa a quatidade de colunas desejadas para o fluxo
+                Point points2[] = new Point[nRows*nCols];
+                pontos_superiores_fluxo= new int[nRows*nCols];
+                pontos_inferiores_fluxo= new int[nRows*nCols];
                 for(int i=0; i<nRows; i++){
-                    //for(int j=0; j<nCols; j++){
-                    for(int j=0; j<3; j++){
-                        points[i*3+j]=new Point(j*colStep, i*rowStep);
-                        points2[i*3+j] = new Point(j*colStep, (i+10)*rowStep); //definindo que a segunda região iá começar na linha 10 * colstep
+                    //Definindo o cojunto de pontos referentes aos limites superiores e inferirores da área de fluxo otico
+                    pontos_inferiores_fluxo[i] = (nCols-1) + (i*nCols);
+                    pontos_superiores_fluxo[i] = i*nCols;
+                    for(int j=0; j<nCols; j++){
+                        points[i*nCols+j]=new Point(j*colStep, i*rowStep);
+                        points2[i*nCols+j] = new Point(j*colStep, (i+10)*rowStep); //definindo que a segunda região iá começar na linha 10 * colstep
                     }
                 }
                 features.fromArray(points);
@@ -399,6 +416,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
             List<Point> prevList=features.toList(), nextList=nextFeatures.toList();
             List<Point> prevList2=features2.toList(), nextList2=nextFeatures2.toList();
+
             Scalar color = new Scalar(255);
 
             //Gerar os pontos e linhas na tela
@@ -406,32 +424,39 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     //Imgproc.circle(img1, prevList.get(i), 5, color);
                 Imgproc.line(img1,prevList.get(i), nextList.get(i), color);
                 Imgproc.line(img1,prevList2.get(i), nextList2.get(i), color);
-                if(comp_points(prevList.get(i),nextList.get(i))){
-                    if(i<prevList.size()-3){//Verifica se não está na última linha
+                //Imgproc.circle(img1,prevList.get(i),1,color);
+                //Imgproc.circle(img1,prevList2.get(i),1,color);
+                if(comp_points(prevList.get(i),nextList.get(i),pontos_superiores_fluxo[i],pontos_inferiores_fluxo[i])){
+                    car_count_faixa1++;
+                    /*if(i<prevList.size()-3){//Verifica se não está na última linha
                         if(comp_points(prevList.get(i+3),nextList.get(i+3))){
-                            car_count++;
+                            car_count_faixa1++;
                         }
                     }
                     else{
                         if(comp_points(prevList.get(i-3),nextList.get(i-3))){
-                            car_count++;
+                            car_count_faixa1++;
                         }
-                    }
+                    }*/
                 }
-                if(comp_points(prevList2.get(i),nextList2.get(i))){
-                    if(i<prevList2.size()-3){//Verifica se não está na última linha
+                if(comp_points(prevList2.get(i),nextList2.get(i),pontos_superiores_fluxo[i],pontos_inferiores_fluxo[i])){
+                    car_count_faixa2++;
+                    /*if(i<prevList2.size()-3){//Verifica se não está na última linha
                         if(comp_points(prevList2.get(i+3),nextList2.get(i+3))){
-                            car_count++;
+                            car_count_faixa2++;
                         }
                     }
                     else{
                         if(comp_points(prevList2.get(i-3),nextList2.get(i-3))){
-                            car_count++;
+                            car_count_faixa2++;
                         }
-                    }
+                    }*/
                 }
             }
             img2 = img1.clone();
+            Imgproc.putText(img1,"F1=" + Integer.toString(car_count_faixa1),prevList.get(5),Core.FONT_ITALIC ,1.0,new Scalar(255));
+            Imgproc.putText(img1,"F2=" + Integer.toString(car_count_faixa2),prevList2.get(5),Core.FONT_ITALIC ,1.0,new Scalar(255));
+
 
             /*fim teste optical flow2*/
 
@@ -537,6 +562,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
        // contours = new ArrayList<MatOfPoint>();
         features = new MatOfPoint();
         features2 = new MatOfPoint();
+        teste = new MatOfPoint();
         err = new MatOfFloat();
        // backgroundSubtractorMOG2.setHistory(100);
        // backgroundSubtractorMOG2.setDetectShadows(true);
