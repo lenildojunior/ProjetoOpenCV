@@ -69,8 +69,20 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
-    Mat img1, img2, img3, result, element, element_dilate, shadow_image, flow;
-    boolean cv_on = false,flag_imei=false,flag_dispositivo_realocado=false,flag_habilita_contagem=false;
+    Mat img1,
+            img2,
+            img3,
+            result,
+            element,
+            element_dilate,
+            shadow_image,
+            flow;
+    boolean cv_on = false,
+            flag_imei=false,
+            flag_dispositivo_realocado=false,
+            flag_entrada_fluxo = false,
+            flag_saida_fluxo = false,
+            flag_habilita_contagem=false;
     CameraBridgeViewBase cameraBridgeViewBase;
     BaseLoaderCallback baseLoaderCallback;
     TelephonyManager tm;
@@ -324,9 +336,22 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
        if(nextPoint.x < prevPoint.x){
            if(prevPoint.x == pontoSuperior && Math.abs(nextPoint.x - prevPoint.x )>20){
                flag_habilita_contagem = true;
+               flag_entrada_fluxo = true;
                Imgproc.putText(img1,"entrou",new Point(100,100),Core.FONT_ITALIC,2,new Scalar(255));
            }
+           else if(prevPoint.x == pontoSuperior && Math.abs(nextPoint.x - prevPoint.x )<20 && flag_entrada_fluxo){
+               flag_entrada_fluxo = false;
+           }
+
+           //Se o objeto cruzar a linha inferior do fluxo
            if(prevPoint.x == pontoInferior && flag_habilita_contagem && Math.abs(nextPoint.x - prevPoint.x )>20){
+               //flag_habilita_contagem = false;
+               //return true;
+               flag_saida_fluxo = true;
+           }
+           //Se o obejto estiver saindo do fluxo e a distância entre os pontos for menor que o threshold
+           else if(prevPoint.x == pontoInferior && flag_saida_fluxo && Math.abs(nextPoint.x - prevPoint.x )<20){
+               flag_saida_fluxo = false;
                flag_habilita_contagem = false;
                return true;
            }
