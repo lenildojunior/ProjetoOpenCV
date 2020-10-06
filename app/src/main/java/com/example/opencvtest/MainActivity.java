@@ -96,7 +96,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     //  List<MatOfPoint> goodContours;
     // BackgroundSubtractorMOG2 backgroundSubtractorMOG2;
     //  MatOfRect obj;
-    // FeatureDetector blob ;
+    // FeatureDetector blob ;;
     // MatOfKeyPoint keypoints1;
     MatOfPoint2f prevFeatures, nextFeatures,prevFeatures2,nextFeatures2;
     MatOfPoint features,features2,teste;
