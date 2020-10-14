@@ -58,6 +58,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.lang.reflect.Array;
 import java.net.Socket;
 import java.text.DateFormat;
 import java.util.AbstractList;
@@ -87,6 +88,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             flag_entrada_fluxo2 = false,
             flag_saida_fluxo2 = false,
             flag_habilita_contagem2=false;
+    List<Point> bons_pontos = new ArrayList<>();
     CameraBridgeViewBase cameraBridgeViewBase;
     BaseLoaderCallback baseLoaderCallback;
     TelephonyManager tm;
@@ -95,7 +97,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     String IMEI,longitude_str,latitude_str;
     Double longitude,latitude;
     List<Point> pontos_fluxo_superior, pontos_fluxo_inferior;
-    int pontos_superiores_fluxo[],pontos_inferiores_fluxo[];
+    int pontos_superiores_fluxo[],pontos_inferiores_fluxo[],teste_saida=0;
+    Point ponto_ref1,ponto_ref2;
     // List<MatOfPoint> contours;
     //  List<MatOfPoint> goodContours;
      //BackgroundSubtractorMOG2 backgroundSubtractorMOG2;
@@ -107,7 +110,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     MatOfByte status;
     MatOfFloat err;
     Date tempoAntigo, tempoAtual, tempoAux;
-    int cont = 0,pontos_entrada =0;
+    int cont = 0;
     int car_count_faixa1 = 0,car_count_faixa2 = 0,flag_envio=0;
 
     Socket client,test_client;
@@ -332,23 +335,25 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     //Função para realizar a ccomparação dos pontos do fluxo optico para contar os carros
+
     boolean comp_points(Point prevPoint, Point nextPoint, Point pontoSuperior, Point pontoInferior,int numFaixa){
-       /*if(nextPoint.x < prevPoint.x && Math.abs(nextPoint.x - prevPoint.x )>10){
-           return true;
-       }
-       else return false;*/
        if(nextPoint.x < prevPoint.x){
            if(prevPoint.x == pontoSuperior.x ){
-               if(Math.abs(nextPoint.x - prevPoint.x )>=20) {
+               if(Math.abs(nextPoint.x - prevPoint.x )>=10) {
                    if (numFaixa == 1) {
-                       flag_habilita_contagem1 = true;
+                       if(ponto_ref1 == null) {
+                           flag_habilita_contagem1 = true;
+                       }
                        flag_entrada_fluxo1 = true;
                        Imgproc.putText(img3, "entrou1", new Point(100, 100), Core.FONT_ITALIC, 2, new Scalar(255));
-                   } else {
-                       flag_habilita_contagem2 = true;
+                   }
+                   else {
+                       if(ponto_ref2 == null) {
+                           flag_habilita_contagem2 = true;
+                       }
                        flag_entrada_fluxo2 = true;
                        Imgproc.putText(img3, "entrou2", new Point(100, 300), Core.FONT_ITALIC, 2, new Scalar(255));
-                       pontos_entrada++;
+
                    }
                }
                 else {
@@ -359,23 +364,34 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
            //Se o objeto cruzar a linha inferior do fluxo
            else if(prevPoint.x == pontoInferior.x ){
-               if (Math.abs(nextPoint.x - prevPoint.x )>=20) {
-                   if (flag_habilita_contagem1 && numFaixa == 1) {
-                       flag_saida_fluxo1 = true;
-                   } else if (flag_habilita_contagem2 && numFaixa == 2) {
-                       flag_saida_fluxo2 = true;
+               if (Math.abs(nextPoint.x - prevPoint.x )>=15) {
+                   if (flag_habilita_contagem1 && !flag_saida_fluxo1 && numFaixa == 1) {
+                       if(ponto_ref1 == null) {
+                           ponto_ref1 = new Point(prevPoint.x,prevPoint.y);
+
+                           flag_saida_fluxo1 = true;
+                       }
+                   }
+                   else if (flag_habilita_contagem2 && !flag_saida_fluxo2 && numFaixa == 2) {
+                       if(ponto_ref2 == null) {
+                           ponto_ref2 = new Point(prevPoint.x,prevPoint.y);
+
+                           flag_saida_fluxo2 = true;
+                       }
                    }
                }
                //Se o obejto estiver saindo do fluxo e a distância entre os pontos for menor que o threshold
-               else if(Math.abs(nextPoint.x - prevPoint.x )<20){
-                   if(flag_saida_fluxo1 && numFaixa==1) {
+               else if(Math.abs(nextPoint.x - prevPoint.x )<15 ){
+                   if(flag_saida_fluxo1  && numFaixa==1 && ponto_ref1.x == prevPoint.x && ponto_ref1.y == prevPoint.y ) {
                        flag_saida_fluxo1 = false;
                        flag_habilita_contagem1 = false;
+                       ponto_ref1 = null;
                        return true;
                    }
-                   else if(flag_saida_fluxo2 && numFaixa==2){
+                   else if(flag_saida_fluxo2 && numFaixa==2 && ponto_ref2.x == prevPoint.x && ponto_ref2.y == prevPoint.y){
                        flag_saida_fluxo2 = false;
                        flag_habilita_contagem2 = false;
+                       ponto_ref2 = null;
                        return true;
                    }
                }
@@ -415,43 +431,27 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             //backgroundSubtractorMOG2.apply(img1,img1);
             //Imgproc.Canny(img1,img1,70,210);
 
-        /*Teste optical flow*/
-            /*if(features.toArray().length==0) {
-                Imgproc.goodFeaturesToTrack(result, features, 10, 0.01, 10);
-                prevFeatures.fromList(features.toList());
-                img2 = result.clone();
-            }
-            Video.calcOpticalFlowPyrLK(result,img2,prevFeatures,nextFeatures,status,err);
-            List<Point> drawFeature = nextFeatures.toList();
-            for(int i = 0; i<drawFeature.size(); i++){
-                Point p = drawFeature.get(i);
-                Imgproc.circle(result, p, 5, new Scalar(255));
-            }
-            img2 = result.clone();
-            prevFeatures.fromList(nextFeatures.toList());*/
-
-        /*fim teste optical flow*/
             Imgproc.GaussianBlur(img1,img1,new Size(3,3),2);
-            //Imgproc.medianBlur(img1,img1,5);
             Core.flip(img1.t(),img1,1);
+
 
             /*Teste optical flow2*/
 
             if(features.toArray().length==0) {
-                int rowStep = 40, colStep = 30,nCols =3;
-                int nRows = 5; //Numero de linhas a se usada no fluxo
+                int rowStep = 30, colStep = 40,nCols =5;
+                int nRows = 6; //Numero de linhas a se usada no fluxo
                 //Cada vetor de pontos representa uma região para o cálculo do fluxo
                 Point points[] = new Point[nRows*nCols]; //o 3 representa a quatidade de colunas desejadas para o fluxo
                 Point points2[] = new Point[nRows*nCols];
-                pontos_superiores_fluxo= new int[nRows*nCols];
-                pontos_inferiores_fluxo= new int[nRows*nCols];
+                pontos_superiores_fluxo= new int[nRows];
+                pontos_inferiores_fluxo= new int[nRows];
                 for(int i=0; i<nRows; i++){
                     //Definindo o cojunto de pontos referentes aos limites superiores e inferirores da área de fluxo otico
                     pontos_superiores_fluxo[i] = (nCols-1) + (i*nCols);
                     pontos_inferiores_fluxo[i] = i*nCols;
                     for(int j=0; j<nCols; j++){
-                        points[i*nCols+j]=new Point(j*colStep, i*rowStep);
-                        points2[i*nCols+j] = new Point(j*colStep, (i+10)*rowStep); //definindo que a segunda região iá começar na linha 10 * colstep
+                        points[i*nCols+j]=new Point(j*colStep +30, i*rowStep);
+                        points2[i*nCols+j] = new Point(j*colStep +30, (i+10)*rowStep); //definindo que a segunda região iá começar na linha 10 * colstep
                     }
                 }
                 features.fromArray(points);
@@ -472,12 +472,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             List<Point> prevList=features.toList(), nextList=nextFeatures.toList();
             List<Point> prevList2=features2.toList(), nextList2=nextFeatures2.toList();
 
+
             //Pegando a posição dos pontos da linha superior
-            //List<Point> pontos_superiores1 = new ArrayList<>();
             //List<Point> pontos_superiores2 = new ArrayList<>();
-            //int pontos_entrada = 0;
-            Imgproc.putText(img3, Integer.toString(pontos_entrada),new Point(100,100),Core.FONT_ITALIC,1,new Scalar(255));
-            pontos_entrada = 0;
             //Usar a logica acima para pegar as posicoes dos pontos nas coordenadas de limite superior e inferior a cada iteracao
             Scalar color = new Scalar(255);
             //Gerar os pontos e linhas na tela
@@ -486,19 +483,27 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 Imgproc.line(img3,prevList.get(i), nextList.get(i), color);
                 Imgproc.line(img3,prevList2.get(i), nextList2.get(i), color);
                 //Imgproc.circle(img3,prevList2.get(i),1,color);
-                if(comp_points(prevList.get(i),nextList.get(i),prevList.get(pontos_superiores_fluxo[i]),prevList.get(pontos_inferiores_fluxo[i]),1)){
-                    car_count_faixa1++;
+                if(i < pontos_superiores_fluxo.length) {
+                    if (comp_points(prevList.get(i), nextList.get(i), prevList.get(pontos_superiores_fluxo[i]), prevList.get(pontos_inferiores_fluxo[i]), 1)) {
+                        car_count_faixa1++;
+                    }
+                    if (comp_points(prevList2.get(i), nextList2.get(i), prevList2.get(pontos_superiores_fluxo[i]), prevList2.get(pontos_inferiores_fluxo[i]), 2)) {
+                        car_count_faixa2++;
+                    }
                 }
-                if(comp_points(prevList2.get(i),nextList2.get(i),prevList2.get(pontos_superiores_fluxo[i]),prevList2.get(pontos_inferiores_fluxo[i]),2)){
-                    car_count_faixa2++;
+                else{
+                    if (comp_points(prevList.get(i), nextList.get(i), prevList.get(pontos_superiores_fluxo[pontos_superiores_fluxo.length-1]), prevList.get(pontos_inferiores_fluxo[pontos_superiores_fluxo.length-1]), 1)) {
+                        car_count_faixa1++;
+                    }
+                    if (comp_points(prevList2.get(i), nextList2.get(i), prevList2.get(pontos_superiores_fluxo[pontos_superiores_fluxo.length-1]), prevList2.get(pontos_inferiores_fluxo[pontos_superiores_fluxo.length-1]), 2)) {
+                        car_count_faixa2++;
+                    }
                 }
             }
 
             img2 = img1.clone();
-            Imgproc.putText(img3,"F1=" + Integer.toString(car_count_faixa1),prevList.get(5),Core.FONT_ITALIC ,1.0,new Scalar(255));
-            Imgproc.putText(img3,"F2=" + Integer.toString(car_count_faixa2),prevList2.get(5),Core.FONT_ITALIC ,1.0,new Scalar(255));
-
-
+            Imgproc.putText(img3,"F1=" + Integer.toString(car_count_faixa1),new Point(200,200),Core.FONT_ITALIC ,1.0,new Scalar(255));
+            Imgproc.putText(img3,"F2=" + Integer.toString(car_count_faixa2),new Point(200,300),Core.FONT_ITALIC ,1.0,new Scalar(255));
             /*fim teste optical flow2*/
 
             //Imgproc.threshold(img1,shadow_image,55,255,Imgproc.THRESH_BINARY_INV);
@@ -566,17 +571,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
             //Core.absdiff(img1,img2,result);
 
-
-
             return img3;
         }
-        /*Imgproc.Canny(img1,img1,70,210);*/
-        /*blob.detect(img1,keypoints1);
-        Features2d.drawKeypoints(img1,keypoints1,result,new Scalar(240,120,10));*/
         else {
             Core.flip(img1.t(), img1, 1);
-            //Imgproc.rectangle(img1,new Point(0,img1.height()/2),new Point(img1.width()/2,img1.height()),new Scalar(255,0,0));
-
             return img1;
         }
     }
