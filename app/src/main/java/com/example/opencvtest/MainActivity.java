@@ -339,7 +339,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     boolean comp_points(Point prevPoint, Point nextPoint, Point pontoSuperior, Point pontoInferior,int numFaixa){
        if(nextPoint.x < prevPoint.x){
            if(prevPoint.x == pontoSuperior.x ){
-               if(Math.abs(nextPoint.x - prevPoint.x )>=10) {
+               if(Math.abs(nextPoint.x - prevPoint.x )>=3 && Math.abs(prevPoint.y - nextPoint.y) >=0 && Math.abs(prevPoint.y - nextPoint.y) <=2) {
                    if (numFaixa == 1) {
                        if(ponto_ref1 == null) {
                            flag_habilita_contagem1 = true;
@@ -364,7 +364,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
            //Se o objeto cruzar a linha inferior do fluxo
            else if(prevPoint.x == pontoInferior.x ){
-               if (Math.abs(nextPoint.x - prevPoint.x )>=15) {
+               if (Math.abs(nextPoint.x - prevPoint.x )>=15 && Math.abs(prevPoint.y - nextPoint.y) >=0 && Math.abs(prevPoint.y - nextPoint.y) <=2) {
                    if (flag_habilita_contagem1 && !flag_saida_fluxo1 && numFaixa == 1) {
                        if(ponto_ref1 == null) {
                            ponto_ref1 = new Point(prevPoint.x,prevPoint.y);
@@ -381,14 +381,14 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                    }
                }
                //Se o obejto estiver saindo do fluxo e a distância entre os pontos for menor que o threshold
-               else if(Math.abs(nextPoint.x - prevPoint.x )<15 ){
+               else if(Math.abs(nextPoint.x - prevPoint.x )<2 && Math.abs(prevPoint.y - nextPoint.y) >=0 && Math.abs(prevPoint.y - nextPoint.y) <=2){
                    if(flag_saida_fluxo1  && numFaixa==1 && ponto_ref1.x == prevPoint.x && ponto_ref1.y == prevPoint.y ) {
                        flag_saida_fluxo1 = false;
                        flag_habilita_contagem1 = false;
                        ponto_ref1 = null;
                        return true;
                    }
-                   else if(flag_saida_fluxo2 && numFaixa==2 && ponto_ref2.x == prevPoint.x && ponto_ref2.y == prevPoint.y){
+                   else if(flag_saida_fluxo2 && flag_habilita_contagem2 && numFaixa==2 && ponto_ref2.x == prevPoint.x && ponto_ref2.y == prevPoint.y){
                        flag_saida_fluxo2 = false;
                        flag_habilita_contagem2 = false;
                        ponto_ref2 = null;
@@ -401,6 +401,45 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
        return false;
     }
 
+    boolean comp_points2(Point prevPoint, Point nextPoint,int numFaixa){
+        if(nextPoint.x < prevPoint.x){
+            if(prevPoint.x - nextPoint.x >=15 && Math.abs(prevPoint.y - nextPoint.y) >=0 && Math.abs(prevPoint.y - nextPoint.y) <=2) {
+                if (numFaixa == 1) {
+                    if(ponto_ref1 == null && !flag_habilita_contagem1) {
+                        ponto_ref1 = new Point(prevPoint.x,prevPoint.y);
+                        flag_habilita_contagem1 = true;
+                        Imgproc.putText(img3, "entrou1", new Point(100, 100), Core.FONT_ITALIC, 2, new Scalar(255));
+                    }
+                }
+                else {
+                    if(ponto_ref2 == null && !flag_habilita_contagem2) {
+                        ponto_ref2 = new Point(prevPoint.x,prevPoint.y);
+                        flag_habilita_contagem2 = true;
+                        Imgproc.putText(img3, "entrou2", new Point(100, 300), Core.FONT_ITALIC, 2, new Scalar(255));
+                    }
+                }
+            }
+            else if(prevPoint.x - nextPoint.x < 2 && Math.abs(prevPoint.y - nextPoint.y) >=0 && Math.abs(prevPoint.y - nextPoint.y) <=5) {
+                if(numFaixa == 1 && ponto_ref1 != null){
+                    if(ponto_ref1.x == prevPoint.x && ponto_ref1.y == prevPoint.y && flag_habilita_contagem1){
+                        flag_habilita_contagem1 = false;
+                        ponto_ref1 = null;
+                        return true;
+                    }
+                }
+                else{
+                    if(ponto_ref2 != null) {
+                        if (ponto_ref2.x == prevPoint.x && ponto_ref2.y == prevPoint.y && flag_habilita_contagem2) {
+                            flag_habilita_contagem2 = false;
+                            ponto_ref2 = null;
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
@@ -438,6 +477,19 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             /*Teste optical flow2*/
 
             if(features.toArray().length==0) {
+                //Usando unica linha
+                /*int rowStep = 30;
+                int nRows = 6;
+                Point points[] = new Point[nRows];
+                Point points2[] = new Point[nRows];
+
+                for(int i=0; i<nRows; i++){
+                    //Definindo o cojunto de pontos referentes aos limites superiores e inferirores da área de fluxo otico
+                    points[i]=new Point(i +30, i*rowStep);
+                    points2[i]=new Point(i +30, (i+10)*rowStep);
+                }*/
+                //Fim usando unica linha
+
                 int rowStep = 30, colStep = 40,nCols =5;
                 int nRows = 6; //Numero de linhas a se usada no fluxo
                 //Cada vetor de pontos representa uma região para o cálculo do fluxo
@@ -481,6 +533,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             for(int i = 0; i<prevList.size(); i++){
                     //Imgproc.circle(img1, prevList.get(i), 5, color);
                 Imgproc.line(img3,prevList.get(i), nextList.get(i), color);
+                //Imgproc.putText(img3, Double.toString(prevList.get(i).x - nextList.get(i).x),prevList.get(i),Core.FONT_ITALIC,1,color);
                 Imgproc.line(img3,prevList2.get(i), nextList2.get(i), color);
                 //Imgproc.circle(img3,prevList2.get(i),1,color);
                 if(i < pontos_superiores_fluxo.length) {
@@ -499,6 +552,16 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                         car_count_faixa2++;
                     }
                 }
+
+                //Usando uma unica linha
+                /*if (comp_points2(prevList.get(i), nextList.get(i), 1)) {
+                    car_count_faixa1++;
+                }
+                if (comp_points2(prevList2.get(i), nextList2.get(i), 2)) {
+                    car_count_faixa2++;
+                }*/
+                //Fim usando unica faixa
+
             }
 
             img2 = img1.clone();
