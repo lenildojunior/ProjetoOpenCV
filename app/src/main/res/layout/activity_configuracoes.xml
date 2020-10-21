@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Configuracoes">
+
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="IMEI"
+        android:textSize="15dp"
+        android:layout_marginTop="20dp"
+        android:id="@+id/text_IMEI"
+        />
+
+    <ProgressBar
+        android:layout_width="28dp"
+        android:layout_height="21dp"
+        android:layout_marginTop="20dp"
+        android:layout_toEndOf="@id/text_IMEI"
+        android:max="100"
+        />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Coordenadas"
+        android:textSize="15dp"
+        android:layout_below="@id/text_IMEI"
+        android:id="@+id/text_Coordenadas"
+        />
+    <ProgressBar
+        android:layout_width="28dp"
+        android:layout_height="21dp"
+        android:layout_marginTop="40dp"
+        android:layout_toEndOf="@id/text_Coordenadas"
+        android:id="@+id/progress_IMEI"
+        />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Informe o número de vias:"
+        android:textSize="15dp"
+        android:layout_below="@id/text_Coordenadas"
+        android:id="@+id/text_vias"
+        />
+
+    <EditText
+        android:layout_height="30dp"
+        android:layout_marginTop="50dp"
+        android:layout_width="28dp"
+        android:textSize="15dp"
+        android:layout_toEndOf="@id/text_vias"
+        android:id="@+id/num_vias"
+        />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Dispositivo realocado?"
+        android:textSize="15dp"
+        android:layout_below="@id/text_vias"
+        android:id="@+id/text_realocacao"
+        />
+    <CheckBox
+        android:layout_width="wrap_content"
+        android:layout_height="20dp"
+        android:layout_below="@id/num_vias"
+        android:layout_toEndOf="@id/text_realocacao"
+        android:id="@+id/checkbox_realocacao"
+        />
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Confirmar"
+        android:id="@+id/btn_confirmar"
+        android:layout_alignParentBottom="true"
+        android:layout_centerInParent="true"
+    />
+
+
+</RelativeLayout>

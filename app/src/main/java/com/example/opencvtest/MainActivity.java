@@ -5,6 +5,7 @@ import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -218,7 +219,15 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             }
         }
 
+        final Button Bt_config = (Button) findViewById(R.id.Config);
 
+        Bt_config.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent inte = new Intent(MainActivity.this,Configuracoes.class);
+                startActivity(inte);
+            }
+        });
 
 
         /*Pegando o código do IMEI*/

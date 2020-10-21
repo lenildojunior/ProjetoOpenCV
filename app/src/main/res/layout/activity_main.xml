@@ -38,8 +38,16 @@
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_centerInParent="true"
-        android:text="@string/app_name"
+        android:text="Iniciar"
         android:onClick="apply_cv"
+        />
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Configurações"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:id="@+id/Config"
         />
     <Button
         android:id="@+id/Stop"
