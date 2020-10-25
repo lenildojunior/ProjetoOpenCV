@@ -97,8 +97,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     LocationListener locationListener;
     String IMEI,longitude_str,latitude_str;
     Double longitude,latitude;
-    List<Point> pontos_fluxo_superior, pontos_fluxo_inferior;
-    int pontos_superiores_fluxo[],pontos_inferiores_fluxo[],teste_saida=0;
+    int pontos_superiores_fluxo[],pontos_inferiores_fluxo[];
     Point ponto_ref1,ponto_ref2;
     // List<MatOfPoint> contours;
     //  List<MatOfPoint> goodContours;
@@ -114,16 +113,47 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     int cont = 0;
     int car_count_faixa1 = 0,car_count_faixa2 = 0,flag_envio=0;
 
+    //Variaveis da conexao via socket
     Socket client,test_client;
     ObjectOutputStream ois,test_ois;
     String IP_digitado;
 
+    //Coordenadas dos pontos das linhas do fluxo
+    List<Point> coordLinhas = new ArrayList<Point>();
+    Point finalLinha = new Point();
+    boolean flag_ok_linhas = false;
+    boolean flag_definindo_linhas = false;
+    int qtdFaixas=0;
+    int nRows1=0,nRows2=0;
 
-    /*Teste cascade calssifier*/
-    //File mCascadeFile;
-    //CascadeClassifier mJavaDetector;
-    //float mRelativeFaceSize   = 0.2f;
-    // int mAbsoluteFaceSize   = 0;
+    /*Definindo o comportamento ao toque*/
+    View.OnTouchListener handleTouch = new View.OnTouchListener(){
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            int x = (int) event.getX();
+            int y = (int) event.getY();
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    finalLinha.x = x;
+                    finalLinha.y = y - 180;
+
+                    break;
+                case MotionEvent.ACTION_UP:
+                    if(!flag_ok_linhas) {
+                        coordLinhas.add(new Point(x, y - 180)); /*Ajuste da coordeanda vertical, de forma a ficar na janela da imagem*/
+                    }
+                    break;
+            }
+            return true;
+        }
+    };
+    /*Fim da definição do comportamento ao toque*/
+
+    public void imprimirLinha(Point ponto_inicial,Point ponto_final, Mat imagem){
+        Imgproc.line(imagem,ponto_inicial,ponto_final,new Scalar(255,255,0));
+    }
 
 
     //Inicio funcoes dos botoes
@@ -219,7 +249,72 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             }
         }
 
+        //Instanciando os botões da view
         final Button Bt_config = (Button) findViewById(R.id.Config);
+        final Button bt_start = (Button) findViewById(R.id.Start);
+        final Button bt_stop = (Button) findViewById(R.id.Stop);
+        final Button bt_def_linhas = (Button) findViewById(R.id.def_linhas);
+        final Button bt_confirmar_linhas = (Button) findViewById(R.id.confirmar_linhas);
+        final Button bt_remover_linhas = (Button) findViewById(R.id.remover_linhas);
+
+        bt_def_linhas.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(!flag_definindo_linhas) {
+                    Bt_config.setVisibility(View.INVISIBLE);
+                    bt_start.setVisibility(View.INVISIBLE);
+                    bt_stop.setVisibility(View.INVISIBLE);
+                    bt_confirmar_linhas.setVisibility(View.VISIBLE);
+                    bt_remover_linhas.setVisibility(View.VISIBLE);
+                    flag_definindo_linhas = true;
+                    nRows1=0;
+                    nRows2=0;
+                    if(flag_ok_linhas){
+                        flag_ok_linhas = false;
+                    }
+                    /*Habilitando a obseravação de toques na superficie da câmera*/
+                    cameraBridgeViewBase.setOnTouchListener(handleTouch);
+                }
+                else{
+                    Bt_config.setVisibility(View.VISIBLE);
+                    bt_start.setVisibility(View.VISIBLE);
+                    bt_stop.setVisibility(View.VISIBLE);
+                    bt_confirmar_linhas.setVisibility(View.INVISIBLE);
+                    bt_remover_linhas.setVisibility(View.INVISIBLE);
+                    cameraBridgeViewBase.setOnTouchListener(null);
+                    flag_definindo_linhas = false;
+                }
+            }
+        });
+
+        bt_confirmar_linhas.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                flag_ok_linhas = true;
+                qtdFaixas = coordLinhas.size()/2;
+                Bt_config.setVisibility(View.VISIBLE);
+                bt_start.setVisibility(View.VISIBLE);
+                bt_stop.setVisibility(View.VISIBLE);
+                bt_confirmar_linhas.setVisibility(View.INVISIBLE);
+                bt_remover_linhas.setVisibility(View.INVISIBLE);
+                cameraBridgeViewBase.setOnTouchListener(null);
+
+                if(nRows2 != 0){
+                    Toast.makeText(getApplicationContext(), "Linahs 1 = " + nRows1 + " e Linhas 2 = " + nRows2, Toast.LENGTH_SHORT).show();
+                }
+                else{
+                    Toast.makeText(getApplicationContext(), "Linahs 1 = " + nRows1 , Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        bt_remover_linhas.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                coordLinhas.clear();
+            }
+        });
+
 
         Bt_config.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -277,6 +372,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         cameraBridgeViewBase = (JavaCameraView)findViewById(R.id.myCameraView);
         cameraBridgeViewBase.setVisibility(SurfaceView.VISIBLE);
         cameraBridgeViewBase.setCvCameraViewListener(this);
+
+
 
         if(OpenCVLoader.initDebug()){
             Toast.makeText(getApplicationContext(),"OpenCV foi carregado!!",Toast.LENGTH_SHORT).show();
@@ -410,7 +507,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
        return false;
     }
 
-    boolean comp_points2(Point prevPoint, Point nextPoint,int numFaixa){
+    /*boolean comp_points2(Point prevPoint, Point nextPoint,int numFaixa){
         if(nextPoint.x < prevPoint.x){
             if(prevPoint.x - nextPoint.x >=15 && Math.abs(prevPoint.y - nextPoint.y) >=0 && Math.abs(prevPoint.y - nextPoint.y) <=2) {
                 if (numFaixa == 1) {
@@ -448,14 +545,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             }
         }
         return false;
-    }
+    }*/
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
        // resetVars();
         img1 = inputFrame.gray();
-
-
         int cx,cy;
 
         //Imgproc.GaussianBlur(img1,img1,new Size(5,5),5);
@@ -533,18 +628,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             List<Point> prevList=features.toList(), nextList=nextFeatures.toList();
             List<Point> prevList2=features2.toList(), nextList2=nextFeatures2.toList();
 
-
-            //Pegando a posição dos pontos da linha superior
-            //List<Point> pontos_superiores2 = new ArrayList<>();
-            //Usar a logica acima para pegar as posicoes dos pontos nas coordenadas de limite superior e inferior a cada iteracao
             Scalar color = new Scalar(255);
             //Gerar os pontos e linhas na tela
             for(int i = 0; i<prevList.size(); i++){
-                    //Imgproc.circle(img1, prevList.get(i), 5, color);
                 Imgproc.line(img3,prevList.get(i), nextList.get(i), color);
-                //Imgproc.putText(img3, Double.toString(prevList.get(i).x - nextList.get(i).x),prevList.get(i),Core.FONT_ITALIC,1,color);
                 Imgproc.line(img3,prevList2.get(i), nextList2.get(i), color);
-                //Imgproc.circle(img3,prevList2.get(i),1,color);
                 if(i < pontos_superiores_fluxo.length) {
                     if (comp_points(prevList.get(i), nextList.get(i), prevList.get(pontos_superiores_fluxo[i]), prevList.get(pontos_inferiores_fluxo[i]), 1)) {
                         car_count_faixa1++;
@@ -647,6 +735,33 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
         else {
             Core.flip(img1.t(), img1, 1);
+            //definindo as linhas linhas
+            int nPontos;
+            int rowStep = 30, colStep = 40,nCols =5;
+            if(!coordLinhas.isEmpty() && flag_definindo_linhas) {
+                if (!flag_ok_linhas) {
+                    for (nPontos = 0; nPontos < coordLinhas.size(); nPontos++) {
+                        Imgproc.circle(img1, coordLinhas.get(nPontos), 1, new Scalar(255, 152, 22));
+                        /*para cada novo ponto, adiciona-lo ao pacote com a chave no formato: "PontoNx" e "PontoNy"*/
+                    }
+                    if (coordLinhas.size() % 2 == 0) {/*desenhar a linha na tela a cada par de pontos*/
+                        imprimirLinha(coordLinhas.get(nPontos - 1), coordLinhas.get(nPontos - 2), img1);
+                    } else {
+                        imprimirLinha(coordLinhas.get(nPontos - 1), finalLinha, img1);
+                    }
+                }
+                else{
+                    for(int k=0;k<coordLinhas.size();k=k+2){
+                        nRows1= ((int)coordLinhas.get(k+1).y - ((int)coordLinhas.get(k).y-1))/rowStep;
+                        for(int i=(int)coordLinhas.get(k).y; i<(int)coordLinhas.get(k+1).y; i=i+rowStep){
+                            for(int j=(int)coordLinhas.get(k).x; j<(int)coordLinhas.get(k).x+(nCols*colStep); j=j+colStep){
+                                Imgproc.circle(img1,new Point(j,i),1,new Scalar(255,255,255));
+                            }
+                        }
+                    }
+                }
+            }
+            //Definindo as linhas
             return img1;
         }
     }
