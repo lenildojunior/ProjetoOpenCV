@@ -89,7 +89,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             flag_entrada_fluxo2 = false,
             flag_saida_fluxo2 = false,
             flag_habilita_contagem2=false;
-    List<Point> bons_pontos = new ArrayList<>();
+    List<Point> bons_pontos1 ;
+    List<Point> bons_pontos2 ;
     CameraBridgeViewBase cameraBridgeViewBase;
     BaseLoaderCallback baseLoaderCallback;
     TelephonyManager tm;
@@ -124,7 +125,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     boolean flag_ok_linhas = false;
     boolean flag_definindo_linhas = false;
     int qtdFaixas=0;
-    int nRows1=0,nRows2=0;
+    int nRows1=0,nRows2=0,nRows=0;
+    int rowStep = 30, colStep = 40,nCols =5;
 
     /*Definindo o comportamento ao toque*/
     View.OnTouchListener handleTouch = new View.OnTouchListener(){
@@ -298,12 +300,19 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 bt_confirmar_linhas.setVisibility(View.INVISIBLE);
                 bt_remover_linhas.setVisibility(View.INVISIBLE);
                 cameraBridgeViewBase.setOnTouchListener(null);
-
-                if(nRows2 != 0){
-                    Toast.makeText(getApplicationContext(), "Linahs 1 = " + nRows1 + " e Linhas 2 = " + nRows2, Toast.LENGTH_SHORT).show();
+                for(int k=0;k<coordLinhas.size();k=k+2){
+                    if(k==0) {
+                        nRows1 = ((int) coordLinhas.get(k + 1).y - (int) coordLinhas.get(k).y) / rowStep +1;
+                    }
+                    else if(k==2){
+                        nRows2 = ((int) coordLinhas.get(k + 1).y - (int) coordLinhas.get(k).y) / rowStep +1;
+                    }
+                }
+                if(nRows2!=0) {
+                    Toast.makeText(getApplicationContext(), "Linhas1 = " + Integer.toString(nRows1) + "Linhas2 = " + Integer.toString(nRows2), Toast.LENGTH_SHORT).show();
                 }
                 else{
-                    Toast.makeText(getApplicationContext(), "Linahs 1 = " + nRows1 , Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), "Linhas1 = " + Integer.toString(nRows1), Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -312,6 +321,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             @Override
             public void onClick(View view) {
                 coordLinhas.clear();
+                bons_pontos1.clear();
+                bons_pontos2.clear();
+                features = new MatOfPoint();
+                features2 = new MatOfPoint();
+                Toast.makeText(getApplicationContext(), "tam = " + bons_pontos1.size(), Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -594,14 +608,22 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 }*/
                 //Fim usando unica linha
 
-                int rowStep = 30, colStep = 40,nCols =5;
-                int nRows = 6; //Numero de linhas a se usada no fluxo
+                //int rowStep = 30, colStep = 40,nCols =5;
+                if(nRows1>nRows2){
+                    nRows = nRows1;
+                }
+                else{
+                    nRows = nRows2;
+                }
+                //int nRows = 6; //Numero de linhas a se usada no fluxo
                 //Cada vetor de pontos representa uma região para o cálculo do fluxo
+
                 Point points[] = new Point[nRows*nCols]; //o 3 representa a quatidade de colunas desejadas para o fluxo
-                Point points2[] = new Point[nRows*nCols];
                 pontos_superiores_fluxo= new int[nRows];
-                pontos_inferiores_fluxo= new int[nRows];
-                for(int i=0; i<nRows; i++){
+                pontos_inferiores_fluxo = new int[nRows];
+                Point points2[] = new Point[nRows * nCols];
+
+                /*for(int i=0; i<nRows; i++){
                     //Definindo o cojunto de pontos referentes aos limites superiores e inferirores da área de fluxo otico
                     pontos_superiores_fluxo[i] = (nCols-1) + (i*nCols);
                     pontos_inferiores_fluxo[i] = i*nCols;
@@ -609,7 +631,19 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                         points[i*nCols+j]=new Point(j*colStep +30, i*rowStep);
                         points2[i*nCols+j] = new Point(j*colStep +30, (i+10)*rowStep); //definindo que a segunda região iá começar na linha 10 * colstep
                     }
+                }*/
+
+                for(int i=0; i<nRows; i++){
+                    //Definindo o cojunto de pontos referentes aos limites superiores e inferirores da área de fluxo otico
+                    pontos_superiores_fluxo[i] = (nCols-1) + (i*nCols);
+                    pontos_inferiores_fluxo[i] = i*nCols;
+                    for(int j=0; j<nCols; j++){
+                        points[i*nCols+j]=bons_pontos1.get(i*nCols+j);
+                        points2[i*nCols+j] = bons_pontos2.get(i*nCols+j); //definindo que a segunda região iá começar na linha 10 * colstep
+                    }
                 }
+
+
                 features.fromArray(points);
                 features2.fromArray(points2);
                 prevFeatures.fromList(features.toList());
@@ -625,7 +659,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             Video.calcOpticalFlowPyrLK(img2,img1, prevFeatures, nextFeatures, status, err);
             Video.calcOpticalFlowPyrLK(img2,img1, prevFeatures2, nextFeatures2, status, err);
 
-            List<Point> prevList=features.toList(), nextList=nextFeatures.toList();
+            List<Point> prevList =features.toList(), nextList=nextFeatures.toList();
             List<Point> prevList2=features2.toList(), nextList2=nextFeatures2.toList();
 
             Scalar color = new Scalar(255);
@@ -737,7 +771,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             Core.flip(img1.t(), img1, 1);
             //definindo as linhas linhas
             int nPontos;
-            int rowStep = 30, colStep = 40,nCols =5;
             if(!coordLinhas.isEmpty() && flag_definindo_linhas) {
                 if (!flag_ok_linhas) {
                     for (nPontos = 0; nPontos < coordLinhas.size(); nPontos++) {
@@ -752,10 +785,15 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 }
                 else{
                     for(int k=0;k<coordLinhas.size();k=k+2){
-                        nRows1= ((int)coordLinhas.get(k+1).y - ((int)coordLinhas.get(k).y-1))/rowStep;
                         for(int i=(int)coordLinhas.get(k).y; i<(int)coordLinhas.get(k+1).y; i=i+rowStep){
                             for(int j=(int)coordLinhas.get(k).x; j<(int)coordLinhas.get(k).x+(nCols*colStep); j=j+colStep){
                                 Imgproc.circle(img1,new Point(j,i),1,new Scalar(255,255,255));
+                                if(k==0) {
+                                    bons_pontos1.add(new Point(j, i));
+                                }
+                                else if(k==2){
+                                    bons_pontos2.add(new Point(j, i));
+                                }
                             }
                         }
                     }
@@ -782,6 +820,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         nextFeatures = new MatOfPoint2f();
         prevFeatures2 = new MatOfPoint2f();
         nextFeatures2 = new MatOfPoint2f();
+        bons_pontos1 = new ArrayList<>();
+        bons_pontos2 = new ArrayList<>();
         status = new MatOfByte();
         //backgroundSubtractorMOG2 = Video.createBackgroundSubtractorMOG2();
        // contours = new ArrayList<MatOfPoint>();
