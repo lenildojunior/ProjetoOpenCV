@@ -89,8 +89,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             flag_entrada_fluxo2 = false,
             flag_saida_fluxo2 = false,
             flag_habilita_contagem2=false;
-    List<Point> bons_pontos1 ;
-    List<Point> bons_pontos2 ;
+    List<Point> pontos_fluxo_faixa1 ;
+    List<Point> pontos_fluxo_faixa2 ;
     CameraBridgeViewBase cameraBridgeViewBase;
     BaseLoaderCallback baseLoaderCallback;
     TelephonyManager tm;
@@ -98,7 +98,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     LocationListener locationListener;
     String IMEI,longitude_str,latitude_str;
     Double longitude,latitude;
-    int pontos_superiores_fluxo[],pontos_inferiores_fluxo[];
+    int pontos_superiores_fluxo[],pontos_inferiores_fluxo[],pontos_superiores_fluxo2[],pontos_inferiores_fluxo2[];
     Point ponto_ref1,ponto_ref2;
     // List<MatOfPoint> contours;
     //  List<MatOfPoint> goodContours;
@@ -126,7 +126,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     boolean flag_definindo_linhas = false;
     int qtdFaixas=0;
     int nRows1=0,nRows2=0,nRows=0;
-    int rowStep = 30, colStep = 40,nCols =5;
+    int rowStep = 30, colStep = 40,nCols =5,tamanhoLista=0;
 
     /*Definindo o comportamento ao toque*/
     View.OnTouchListener handleTouch = new View.OnTouchListener(){
@@ -321,11 +321,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             @Override
             public void onClick(View view) {
                 coordLinhas.clear();
-                bons_pontos1.clear();
-                bons_pontos2.clear();
+                pontos_fluxo_faixa1.clear();
+                pontos_fluxo_faixa2.clear();
                 features = new MatOfPoint();
                 features2 = new MatOfPoint();
-                Toast.makeText(getApplicationContext(), "tam = " + bons_pontos1.size(), Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -521,46 +520,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
        return false;
     }
 
-    /*boolean comp_points2(Point prevPoint, Point nextPoint,int numFaixa){
-        if(nextPoint.x < prevPoint.x){
-            if(prevPoint.x - nextPoint.x >=15 && Math.abs(prevPoint.y - nextPoint.y) >=0 && Math.abs(prevPoint.y - nextPoint.y) <=2) {
-                if (numFaixa == 1) {
-                    if(ponto_ref1 == null && !flag_habilita_contagem1) {
-                        ponto_ref1 = new Point(prevPoint.x,prevPoint.y);
-                        flag_habilita_contagem1 = true;
-                        Imgproc.putText(img3, "entrou1", new Point(100, 100), Core.FONT_ITALIC, 2, new Scalar(255));
-                    }
-                }
-                else {
-                    if(ponto_ref2 == null && !flag_habilita_contagem2) {
-                        ponto_ref2 = new Point(prevPoint.x,prevPoint.y);
-                        flag_habilita_contagem2 = true;
-                        Imgproc.putText(img3, "entrou2", new Point(100, 300), Core.FONT_ITALIC, 2, new Scalar(255));
-                    }
-                }
-            }
-            else if(prevPoint.x - nextPoint.x < 2 && Math.abs(prevPoint.y - nextPoint.y) >=0 && Math.abs(prevPoint.y - nextPoint.y) <=5) {
-                if(numFaixa == 1 && ponto_ref1 != null){
-                    if(ponto_ref1.x == prevPoint.x && ponto_ref1.y == prevPoint.y && flag_habilita_contagem1){
-                        flag_habilita_contagem1 = false;
-                        ponto_ref1 = null;
-                        return true;
-                    }
-                }
-                else{
-                    if(ponto_ref2 != null) {
-                        if (ponto_ref2.x == prevPoint.x && ponto_ref2.y == prevPoint.y && flag_habilita_contagem2) {
-                            flag_habilita_contagem2 = false;
-                            ponto_ref2 = null;
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-        return false;
-    }*/
-
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
        // resetVars();
@@ -609,91 +568,170 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 //Fim usando unica linha
 
                 //int rowStep = 30, colStep = 40,nCols =5;
-                if(nRows1>nRows2){
-                    nRows = nRows1;
-                }
-                else{
-                    nRows = nRows2;
-                }
-                //int nRows = 6; //Numero de linhas a se usada no fluxo
-                //Cada vetor de pontos representa uma região para o cálculo do fluxo
-
-                Point points[] = new Point[nRows*nCols]; //o 3 representa a quatidade de colunas desejadas para o fluxo
-                pontos_superiores_fluxo= new int[nRows];
-                pontos_inferiores_fluxo = new int[nRows];
-                Point points2[] = new Point[nRows * nCols];
-
-                /*for(int i=0; i<nRows; i++){
-                    //Definindo o cojunto de pontos referentes aos limites superiores e inferirores da área de fluxo otico
-                    pontos_superiores_fluxo[i] = (nCols-1) + (i*nCols);
-                    pontos_inferiores_fluxo[i] = i*nCols;
-                    for(int j=0; j<nCols; j++){
-                        points[i*nCols+j]=new Point(j*colStep +30, i*rowStep);
-                        points2[i*nCols+j] = new Point(j*colStep +30, (i+10)*rowStep); //definindo que a segunda região iá começar na linha 10 * colstep
-                    }
-                }*/
-
-                for(int i=0; i<nRows; i++){
-                    //Definindo o cojunto de pontos referentes aos limites superiores e inferirores da área de fluxo otico
-                    pontos_superiores_fluxo[i] = (nCols-1) + (i*nCols);
-                    pontos_inferiores_fluxo[i] = i*nCols;
-                    for(int j=0; j<nCols; j++){
-                        points[i*nCols+j]=bons_pontos1.get(i*nCols+j);
-                        points2[i*nCols+j] = bons_pontos2.get(i*nCols+j); //definindo que a segunda região iá começar na linha 10 * colstep
+                if(qtdFaixas==2) {
+                    if (nRows1 > nRows2) {
+                        nRows = nRows1;
+                    } else {
+                        nRows = nRows2;
                     }
                 }
+                else nRows = nRows1;
+                if(qtdFaixas==1){
+                    //Cada vetor de pontos representa uma região para o cálculo do fluxo
+                    Point points[] = new Point[nRows1*nCols]; //o 3 representa a quatidade de colunas desejadas para o fluxo
+                    pontos_superiores_fluxo= new int[nRows1];
+                    pontos_inferiores_fluxo = new int[nRows1];
+
+                    for(int i=0; i<nRows; i++){
+                        //Definindo o cojunto de pontos referentes aos limites superiores e inferirores da área de fluxo otico
+                        pontos_superiores_fluxo[i] = (nCols - 1) + (i * nCols);
+                        pontos_inferiores_fluxo[i] = i * nCols;
+                        for(int j=0; j<nCols; j++){
+                            points[i*nCols+j]=pontos_fluxo_faixa1.get(i*nCols+j);
+                        }
+                    }
+                    features.fromArray(points);
+                    prevFeatures.fromList(features.toList());
+                }
+                else if(qtdFaixas==2){
+                    Point points[] = new Point[nRows1*nCols]; //o 3 representa a quatidade de colunas desejadas para o fluxo
+                    pontos_superiores_fluxo= new int[nRows1];
+                    pontos_inferiores_fluxo = new int[nRows1];
+                    Point points2[] = new Point[nRows2 * nCols];
+                    pontos_superiores_fluxo2= new int[nRows2];
+                    pontos_inferiores_fluxo2 = new int[nRows2];
 
 
-                features.fromArray(points);
-                features2.fromArray(points2);
-                prevFeatures.fromList(features.toList());
-                prevFeatures2.fromList(features2.toList());
+                    for(int i=0; i<nRows; i++){
+                        //Definindo o cojunto de pontos referentes aos limites superiores e inferirores da área de fluxo otico
+                        if(i<nRows1) {
+                            pontos_superiores_fluxo[i] = (nCols - 1) + (i * nCols);
+                            pontos_inferiores_fluxo[i] = i * nCols;
+                        }
+                        if(i<nRows2){
+                            pontos_superiores_fluxo2[i] = (nCols - 1) + (i * nCols);
+                            pontos_inferiores_fluxo2[i] = i * nCols;
+                        }
+                        for(int j=0; j<nCols; j++){
+                            if(i<nRows1) points[i*nCols+j]=pontos_fluxo_faixa1.get(i*nCols+j);
+                            if(i<nRows2) points2[i*nCols+j] = pontos_fluxo_faixa2.get(i*nCols+j); //definindo que a segunda região iá começar na linha 10 * colstep
+                        }
+                    }
+                    features.fromArray(points);
+                    features2.fromArray(points2);
+                    prevFeatures.fromList(features.toList());
+                    prevFeatures2.fromList(features2.toList());
+
+
+                }
+
                 img2 = img1.clone();
 
            }
             img3 = img1.clone();
-            nextFeatures.fromArray(prevFeatures.toArray());
-            nextFeatures2.fromArray(prevFeatures2.toArray());
-
-            //Processamento do fluxo optico
-            Video.calcOpticalFlowPyrLK(img2,img1, prevFeatures, nextFeatures, status, err);
-            Video.calcOpticalFlowPyrLK(img2,img1, prevFeatures2, nextFeatures2, status, err);
-
-            List<Point> prevList =features.toList(), nextList=nextFeatures.toList();
-            List<Point> prevList2=features2.toList(), nextList2=nextFeatures2.toList();
-
             Scalar color = new Scalar(255);
-            //Gerar os pontos e linhas na tela
-            for(int i = 0; i<prevList.size(); i++){
-                Imgproc.line(img3,prevList.get(i), nextList.get(i), color);
-                Imgproc.line(img3,prevList2.get(i), nextList2.get(i), color);
-                if(i < pontos_superiores_fluxo.length) {
-                    if (comp_points(prevList.get(i), nextList.get(i), prevList.get(pontos_superiores_fluxo[i]), prevList.get(pontos_inferiores_fluxo[i]), 1)) {
-                        car_count_faixa1++;
-                    }
-                    if (comp_points(prevList2.get(i), nextList2.get(i), prevList2.get(pontos_superiores_fluxo[i]), prevList2.get(pontos_inferiores_fluxo[i]), 2)) {
-                        car_count_faixa2++;
-                    }
+            if(qtdFaixas==1) {
+                nextFeatures.fromArray(prevFeatures.toArray());
+                Video.calcOpticalFlowPyrLK(img2,img1, prevFeatures, nextFeatures, status, err);
+                List<Point> prevList =features.toList(), nextList=nextFeatures.toList();
+                tamanhoLista = prevList.size();
+
+                for(int i = 0; i<tamanhoLista; i++){
+                    Imgproc.line(img3,prevList.get(i), nextList.get(i), color);
+                        if(i<pontos_superiores_fluxo.length){
+                            if (comp_points(prevList.get(i), nextList.get(i), prevList.get(pontos_superiores_fluxo[i]), prevList.get(pontos_inferiores_fluxo[i]), 1)) {
+                                car_count_faixa1++;
+                            }
+                        }
+                        else {
+                            if (comp_points(prevList.get(i), nextList.get(i), prevList.get(pontos_superiores_fluxo[pontos_superiores_fluxo.length - 1]), prevList.get(pontos_inferiores_fluxo[pontos_superiores_fluxo.length - 1]), 1)) {
+                                car_count_faixa1++;
+                            }
+                        }
                 }
-                else{
-                    if (comp_points(prevList.get(i), nextList.get(i), prevList.get(pontos_superiores_fluxo[pontos_superiores_fluxo.length-1]), prevList.get(pontos_inferiores_fluxo[pontos_superiores_fluxo.length-1]), 1)) {
-                        car_count_faixa1++;
+            }
+            else if(qtdFaixas==2) {
+                nextFeatures.fromArray(prevFeatures.toArray());
+                nextFeatures2.fromArray(prevFeatures2.toArray());
+
+                //Processamento do fluxo optico
+                Video.calcOpticalFlowPyrLK(img2, img1, prevFeatures, nextFeatures, status, err);
+                Video.calcOpticalFlowPyrLK(img2, img1, prevFeatures2, nextFeatures2, status, err);
+
+                List<Point> prevList = features.toList(), nextList = nextFeatures.toList();
+                List<Point> prevList2 = features2.toList(), nextList2 = nextFeatures2.toList();
+
+                if (prevList.size() > prevList2.size()) {
+                    tamanhoLista = prevList.size();
+                } else {
+                    tamanhoLista = prevList2.size();
+                }
+
+                for(int i = 0; i<tamanhoLista; i++){
+                    if(i<prevList.size()) Imgproc.line(img3,prevList.get(i), nextList.get(i), color);
+                    if(i<prevList2.size()) Imgproc.line(img3,prevList2.get(i), nextList2.get(i), color);
+
+                    if(i<prevList.size()){
+                        if(i<pontos_superiores_fluxo.length){
+                            if (comp_points(prevList.get(i), nextList.get(i), prevList.get(pontos_superiores_fluxo[i]), prevList.get(pontos_inferiores_fluxo[i]), 1)) {
+                                car_count_faixa1++;
+                            }
+                        }
+                        else {
+                            if (comp_points(prevList.get(i), nextList.get(i), prevList.get(pontos_superiores_fluxo[pontos_superiores_fluxo.length - 1]), prevList.get(pontos_inferiores_fluxo[pontos_superiores_fluxo.length - 1]), 1)) {
+                                car_count_faixa1++;
+                            }
+                        }
                     }
-                    if (comp_points(prevList2.get(i), nextList2.get(i), prevList2.get(pontos_superiores_fluxo[pontos_superiores_fluxo.length-1]), prevList2.get(pontos_inferiores_fluxo[pontos_superiores_fluxo.length-1]), 2)) {
-                        car_count_faixa2++;
+
+                    if(i<prevList2.size()){
+                        if(i<pontos_superiores_fluxo2.length){
+                            if (comp_points(prevList2.get(i), nextList2.get(i), prevList2.get(pontos_superiores_fluxo2[i]), prevList2.get(pontos_inferiores_fluxo2[i]), 2)) {
+                                car_count_faixa2++;
+                            }
+                        }
+                        else {
+                            if (comp_points(prevList2.get(i), nextList2.get(i), prevList2.get(pontos_superiores_fluxo2[pontos_superiores_fluxo2.length - 1]), prevList2.get(pontos_inferiores_fluxo2[pontos_superiores_fluxo2.length - 1]), 2)) {
+                                car_count_faixa2++;
+                            }
+                        }
                     }
                 }
 
-                //Usando uma unica linha
-                /*if (comp_points2(prevList.get(i), nextList.get(i), 1)) {
-                    car_count_faixa1++;
-                }
-                if (comp_points2(prevList2.get(i), nextList2.get(i), 2)) {
-                    car_count_faixa2++;
-                }*/
-                //Fim usando unica faixa
 
             }
+            //Scalar color = new Scalar(255);
+            //Gerar os pontos e linhas na tela
+           /* for(int i = 0; i<tamanhoLista; i++){
+                if(i<prevList.size()) Imgproc.line(img3,prevList.get(i), nextList.get(i), color);
+                if(i<prevList2.size()) Imgproc.line(img3,prevList2.get(i), nextList2.get(i), color);
+
+                if(i<prevList.size()){
+                    if(i<pontos_superiores_fluxo.length){
+                        if (comp_points(prevList.get(i), nextList.get(i), prevList.get(pontos_superiores_fluxo[i]), prevList.get(pontos_inferiores_fluxo[i]), 1)) {
+                            car_count_faixa1++;
+                        }
+                    }
+                    else {
+                        if (comp_points(prevList.get(i), nextList.get(i), prevList.get(pontos_superiores_fluxo[pontos_superiores_fluxo.length - 1]), prevList.get(pontos_inferiores_fluxo[pontos_superiores_fluxo.length - 1]), 1)) {
+                            car_count_faixa1++;
+                        }
+                    }
+                }
+
+                if(i<prevList2.size()){
+                    if(i<pontos_superiores_fluxo2.length){
+                        if (comp_points(prevList2.get(i), nextList2.get(i), prevList2.get(pontos_superiores_fluxo2[i]), prevList2.get(pontos_inferiores_fluxo2[i]), 2)) {
+                            car_count_faixa2++;
+                        }
+                    }
+                    else {
+                        if (comp_points(prevList2.get(i), nextList2.get(i), prevList2.get(pontos_superiores_fluxo2[pontos_superiores_fluxo2.length - 1]), prevList2.get(pontos_inferiores_fluxo2[pontos_superiores_fluxo2.length - 1]), 2)) {
+                            car_count_faixa2++;
+                        }
+                    }
+                }
+            }*/
 
             img2 = img1.clone();
             Imgproc.putText(img3,"F1=" + Integer.toString(car_count_faixa1),new Point(200,200),Core.FONT_ITALIC ,1.0,new Scalar(255));
@@ -789,10 +827,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                             for(int j=(int)coordLinhas.get(k).x; j<(int)coordLinhas.get(k).x+(nCols*colStep); j=j+colStep){
                                 Imgproc.circle(img1,new Point(j,i),1,new Scalar(255,255,255));
                                 if(k==0) {
-                                    bons_pontos1.add(new Point(j, i));
+                                    pontos_fluxo_faixa1.add(new Point(j, i));
                                 }
                                 else if(k==2){
-                                    bons_pontos2.add(new Point(j, i));
+                                    pontos_fluxo_faixa2.add(new Point(j, i));
                                 }
                             }
                         }
@@ -820,8 +858,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         nextFeatures = new MatOfPoint2f();
         prevFeatures2 = new MatOfPoint2f();
         nextFeatures2 = new MatOfPoint2f();
-        bons_pontos1 = new ArrayList<>();
-        bons_pontos2 = new ArrayList<>();
+        pontos_fluxo_faixa1 = new ArrayList<>();
+        pontos_fluxo_faixa2 = new ArrayList<>();
         status = new MatOfByte();
         //backgroundSubtractorMOG2 = Video.createBackgroundSubtractorMOG2();
        // contours = new ArrayList<MatOfPoint>();
