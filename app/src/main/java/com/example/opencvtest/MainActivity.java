@@ -128,6 +128,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     int nRows1=0,nRows2=0,nRows=0;
     int rowStep = 30, colStep = 40,nCols =5,tamanhoLista=0;
 
+    //Chamando o banco
+    DatabaseHelper myDb;
+
     /*Definindo o comportamento ao toque*/
     View.OnTouchListener handleTouch = new View.OnTouchListener(){
         @Override
@@ -250,6 +253,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
             }
         }
+
+        //Instanciando o banco
+        myDb = new DatabaseHelper(this);
 
         //Instanciando os botões da view
         final Button Bt_config = (Button) findViewById(R.id.Config);
