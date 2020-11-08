@@ -104,10 +104,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return true;
     }
 
-    public Integer deletar(String id,String TABLE_NAME){
+    public Integer deletar(String TABLE_NAME){
         SQLiteDatabase db = this.getWritableDatabase();
         //Irá retornar a quantidade de linha afetadas pelo comando DELETE
-        return db.delete(TABLE_NAME,"ID = ?", new String[] {id});
+        return db.delete(TABLE_NAME,"ID > 0",null);
     }
 
 }

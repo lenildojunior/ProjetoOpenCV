@@ -333,6 +333,14 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 pontos_fluxo_faixa2.clear();
                 features = new MatOfPoint();
                 features2 = new MatOfPoint();
+                int linhas_afetadas = myDb.deletar("coordenadas_pontos_bckp");
+                if(linhas_afetadas>0){
+                    Toast.makeText(getApplicationContext(),"Dados removidos com sucesso",Toast.LENGTH_SHORT).show();
+                }
+                else{
+                    Toast.makeText(getApplicationContext(),"Não há registros a serem removidos",Toast.LENGTH_SHORT).show();
+                }
+
             }
         });
 
@@ -349,6 +357,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     }
                     Toast.makeText(getApplicationContext(),"Coordenadas recuperadas com sucesso", Toast.LENGTH_SHORT).show();
                     flag_ok_linhas = true;
+                }
+                else{
+                    Toast.makeText(getApplicationContext(),"Não há dados registrados",Toast.LENGTH_SHORT).show();
                 }
             }
         });
