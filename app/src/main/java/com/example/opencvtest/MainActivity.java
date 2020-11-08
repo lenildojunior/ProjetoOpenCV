@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -148,6 +149,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 case MotionEvent.ACTION_UP:
                     if(!flag_ok_linhas) {
                         coordLinhas.add(new Point(x, y - 180)); /*Ajuste da coordeanda vertical, de forma a ficar na janela da imagem*/
+                        myDb.inserirDadosCoordenadasPontos(Integer.toString(x),Integer.toString(y - 180));
                     }
                     break;
             }
@@ -338,8 +340,16 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         Bt_config.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent inte = new Intent(MainActivity.this,Configuracoes.class);
-                startActivity(inte);
+                /*Intent inte = new Intent(MainActivity.this,Configuracoes.class);
+                startActivity(inte);*/
+                Cursor resultado_busca = myDb.buscarTodos("coordenadas_pontos_bckp");
+                if(resultado_busca.getCount()>0){
+                    while (resultado_busca.moveToNext()){
+                        coordLinhas.add(new Point(resultado_busca.getInt(1),resultado_busca.getInt(2)));
+                    }
+                    Toast.makeText(getApplicationContext(),"Coordenadas recuperadas com sucesso", Toast.LENGTH_SHORT).show();
+                    flag_ok_linhas = true;
+                }
             }
         });
 
@@ -843,6 +853,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     }
                 }
             }
+
             //Definindo as linhas
             return img1;
         }
