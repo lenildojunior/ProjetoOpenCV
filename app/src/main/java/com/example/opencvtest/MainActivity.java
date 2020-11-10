@@ -70,6 +70,12 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
@@ -131,6 +137,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     //Chamando o banco
     DatabaseHelper myDb;
+
+    //API
+    WebAPI webAPI;
+    private TextView txt_view;
+
+
 
     /*Definindo o comportamento ao toque*/
     View.OnTouchListener handleTouch = new View.OnTouchListener(){
@@ -237,6 +249,160 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
     }
 
+    public void apiGetDispositivos(){
+        //Instanciando as funções da API
+        //Chamando a API
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("http://54.159.245.247:5000/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        webAPI = retrofit.create(WebAPI.class);
+
+        Call<List<Dispositivo>> call = webAPI.getDispositivos();
+        call.enqueue(new Callback<List<Dispositivo>>() {
+            @Override
+            public void onResponse(Call<List<Dispositivo>> call, Response<List<Dispositivo>> response) {
+                if(!response.isSuccessful()){
+                    txt_view.setText("Code:" + response.code());
+                    return;
+                }
+
+                List<Dispositivo> dispositivos = response.body();
+
+                for(Dispositivo dispositivo : dispositivos){
+                    String content = "";
+                    content += "id: " + dispositivo.getId() + "\n";
+                    content += "marca_modelo " + dispositivo.getMarcaModelo() + "\n";
+                    //content += "data_cadastro " + dispositivo.getDataCadasro()  + "\n";
+                    content += "criado_por " + dispositivo.getCriadoPor()  + "\n";
+                    content += "ativo " + dispositivo.getAtivo()  + "\n\n";
+
+                    txt_view.append(content);
+                }
+
+            }
+
+            @Override
+            public void onFailure(Call<List<Dispositivo>> call, Throwable t) {
+                txt_view.setText(t.getMessage());
+            }
+        });
+    }
+
+    public void apiGetDispositivos(String dispositivoId){
+        //Instanciando as funções da API
+        //Chamando a API
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("http://54.159.245.247:5000/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        webAPI = retrofit.create(WebAPI.class);
+
+        Call<List<Dispositivo>> call = webAPI.getDispositivos(dispositivoId);
+        call.enqueue(new Callback<List<Dispositivo>>() {
+            @Override
+            public void onResponse(Call<List<Dispositivo>> call, Response<List<Dispositivo>> response) {
+                if(!response.isSuccessful()){
+                    txt_view.setText("Code:" + response.code());
+                    return;
+                }
+
+                List<Dispositivo> dispositivos = response.body();
+
+                for(Dispositivo dispositivo : dispositivos){
+                    String content = "";
+                    content += "id: " + dispositivo.getId() + "\n";
+                    content += "marca_modelo " + dispositivo.getMarcaModelo() + "\n";
+                    //content += "data_cadastro " + dispositivo.getDataCadasro()  + "\n";
+                    content += "criado_por " + dispositivo.getCriadoPor()  + "\n";
+                    content += "ativo " + dispositivo.getAtivo()  + "\n\n";
+
+                    txt_view.append(content);
+                }
+
+            }
+
+            @Override
+            public void onFailure(Call<List<Dispositivo>> call, Throwable t) {
+                txt_view.setText(t.getMessage());
+            }
+        });
+    }
+
+    public void apiGetLocalizacao(String dispositivoId){
+        //Instanciando as funções da API
+        //Chamando a API
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("http://54.159.245.247:5000/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        webAPI = retrofit.create(WebAPI.class);
+
+        Call<List<Localizacao>> call = webAPI.getLocalizacao(dispositivoId);
+        call.enqueue(new Callback<List<Localizacao>>() {
+            @Override
+            public void onResponse(Call<List<Localizacao>> call, Response<List<Localizacao>> response) {
+                if(!response.isSuccessful()){
+                    txt_view.setText("Code:" + response.code());
+                    return;
+                }
+
+                List<Localizacao> localizacoes = response.body();
+
+                for(Localizacao localizacao : localizacoes){
+                    String content = "";
+                    content += "id_dispositivo: " + localizacao.getId_dispositivo() + "\n";
+                    content += "latitude: " + localizacao.getLatitude() + "\n";
+                    content += "longitude: " + localizacao.getLongitude() + "\n";
+                    content += "num_faixas: " + localizacao.getQtdFaixas() + "\n\n";
+
+                    txt_view.append(content);
+                }
+
+            }
+
+            @Override
+            public void onFailure(Call<List<Localizacao>> call, Throwable t) {
+                txt_view.setText(t.getMessage());
+            }
+        });
+    }
+
+    public void apiPostTest(){
+        //Instanciando as funções da API
+        //Chamando a API
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("https://jsonplaceholder.typicode.com/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        webAPI = retrofit.create(WebAPI.class);
+        Post post = new Post(23,"Title","text");
+        Call<Post> call = webAPI.createPost(post);
+        call.enqueue(new Callback<Post>() {
+            @Override
+            public void onResponse(Call<Post> call, Response<Post> response) {
+                if(!response.isSuccessful()){
+                    txt_view.setText("Code:" + response.code());
+                    return;
+                }
+                Post postResponse = response.body();
+                String content = "";
+                content += "id: "+ postResponse.getId();
+                content += "user_id: "+ postResponse.getUserId();
+                content += "title: " + postResponse.getTitlte();
+                content += "text: " + postResponse.getText();
+
+                txt_view.append(content);
+            }
+
+            @Override
+            public void onFailure(Call<Post> call, Throwable t) {
+                txt_view.setText(t.getMessage());
+            }
+        });
+
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -254,10 +420,19 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
             }
+            if (checkSelfPermission(Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED){
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.INTERNET}, 1);
+            }
         }
 
         //Instanciando o banco
         myDb = new DatabaseHelper(this);
+
+        txt_view = findViewById(R.id.txt_view);
+
+        //apiGetDspositivos("353114091675712");
+        //apiGetLocalizacao("353114091675712");
+        //apiPostTest();
 
         //Instanciando os botões da view
         final Button Bt_config = (Button) findViewById(R.id.Config);
@@ -266,6 +441,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         final Button bt_def_linhas = (Button) findViewById(R.id.def_linhas);
         final Button bt_confirmar_linhas = (Button) findViewById(R.id.confirmar_linhas);
         final Button bt_remover_linhas = (Button) findViewById(R.id.remover_linhas);
+
 
         bt_def_linhas.setOnClickListener(new View.OnClickListener() {
             @Override
